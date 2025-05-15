@@ -1,0 +1,334 @@
+# Stellar Swipe: Social Crowdfunding on Stellar
+
+## Overview
+Stellar Swipe is a social crowdfunding platform built on the Stellar blockchain that enables frictionless support for on-chain projects. It allows users to discover and fund projects with a simple swipe gesture, without requiring traditional crypto wallet setup or blockchain knowledge. By combining Web2-level simplicity with Web3 security and transparency, Stellar Swipe makes supporting innovative projects as easy as using a dating app, while maintaining the benefits of blockchain-based crowdfunding.
+
+## Core Features
+
+### 1. Swipe-to-Fund UX
+- **What it does**: Presents users with a card-based interface showing projects seeking funding, allowing them to swipe right to commit a small amount of XLM (e.g., 5 XLM) to back projects.
+- **Why it's important**: Removes friction from the funding process, making it accessible to users with no crypto experience.
+- **How it works**: Projects are presented as swipeable cards with compelling visuals and brief descriptions. A right swipe initiates the funding process, while a left swipe skips to the next project.
+
+### 2. Social Authentication & Identity
+- **What it does**: Allows users to log in with their social accounts (X, Farcaster) or email via Privy.
+- **Why it's important**: Eliminates the need for seed phrases or crypto wallets while maintaining security.
+- **How it works**: Privy handles social authentication and wallet creation, providing a seamless Web2-style login experience.
+
+### 3. Stellar Wallet Infrastructure
+- **What it does**: Uses Privy's built-in Stellar wallet integration to create and manage Stellar wallets.
+- **Why it's important**: Provides blockchain functionality without exposing users to technical complexity.
+- **How it works**: The app leverages Privy's server-side wallet creation API to generate a Stellar wallet for each user upon account creation.
+
+### 4. Soroban Smart Contract Integration
+- **What it does**: Uses a funding contract for project management and fund distribution.
+- **Why it's important**: Enables secure, trustless fund management.
+- **How it works**: The funding contract manages the release of funds based on predefined conditions.
+
+### 5. Native On-ramping via Privy
+- **What it does**: Leverages Privy's built-in on-ramping solutions to allow users to purchase XLM.
+- **Why it's important**: Removes the barrier of acquiring cryptocurrency before participating.
+- **How it works**: Users can purchase XLM directly in the app, with funds delivered to their Stellar wallet for immediate use.
+
+### 6. Reputation System
+- **What it does**: Builds on-chain reputation for users based on their backing, sharing, and referring activities.
+- **Why it's important**: Creates a social layer that incentivizes participation and quality project discovery.
+- **How it works**: Users earn reputation points for successful project backing, referring new users, and other positive contributions to the ecosystem.
+
+### 7. Project Discovery & Management
+- **What it does**: Provides comprehensive tools for discovering projects and tracking their funding progress.
+- **Why it's important**: Helps users find projects aligned with their interests and monitor their investments.
+- **How it works**: 
+  - Advanced filtering system with multiple parameters (category, funding amount, time remaining, etc.)
+  - Personalized recommendations based on user history and preferences
+  - Project cards with clear visual progress indicators
+  - Detailed project views with milestones and updates
+  - Bookmark/save functionality for projects of interest
+  - Notifications for project updates and funding milestones
+  - Search with natural language processing for intuitive project finding
+
+### 8. Social Sharing & Referrals
+- **What it does**: Enables users to share projects and earn reputation when others join through their referral links.
+- **Why it's important**: Drives organic growth and rewards community building.
+- **How it works**: 
+  - One-click sharing to popular social platforms (X, Farcaster, etc.)
+  - Customizable share messages and project previews
+  - Unique referral codes generated for each shared project
+  - Real-time tracking of referral conversions and rewards
+  - Referral leaderboards to encourage competition
+  - Tiered referral bonuses based on user reputation
+  - Interactive share cards designed for maximum engagement
+  - Analytics dashboard for tracking share performance
+
+### 9. User Experience & Engagement
+- **What it does**: Creates a gamified, habit-forming experience that keeps users returning.
+- **Why it's important**: Increases user retention and platform growth.
+- **How it works**:
+  - Daily swipe quota with streak rewards
+  - Achievement badges for platform milestones
+  - Personalized feed algorithm optimized for discovery
+  - Onboarding flow with interactive tutorials
+  - Progressive disclosure of features to avoid overwhelm
+  - Frictionless transitions between browsing and backing
+  - Animation and haptic feedback for key actions
+  - Micro-rewards for consistent engagement
+
+## Technical Architecture
+
+### System Components
+
+1. **Frontend Application**
+   - React Native mobile app (iOS priority, Android later)
+   - React web application for broader access
+   - Responsive design for cross-device compatibility
+
+2. **Authentication Layer**
+   - Privy SDK for social and email authentication
+   - Session management and secure storage
+
+3. **Wallet Infrastructure**
+   - Privy Stellar wallet API integration
+   - Transaction preparation and signing
+   - Balance management
+
+4. **Smart Contract System**
+   - Soroban funding contract for project management and fund release
+   - Contract monitoring and event handling
+
+5. **Backend Services**
+   - User profile and preferences management
+   - Project database and discovery algorithm
+   - Reputation system calculation and storage
+   - Analytics and monitoring
+
+6. **Blockchain Interaction Layer**
+   - Stellar SDK integration
+   - Transaction construction and submission
+   - Block monitoring and event processing
+
+### Data Models
+
+1. **User Profile**
+   - User ID (linked to social accounts)
+   - Stellar account address
+   - Reputation score
+   - Preferences
+   - Backing history
+   - Social connections
+
+2. **Project**
+   - Project ID
+   - Creator information
+   - Title and description
+   - Media assets
+   - Funding goal
+   - Current funding status
+   - Timeline and milestones
+   - Category and tags
+   - Smart contract address
+
+3. **Transaction**
+   - Transaction ID
+   - User ID
+   - Project ID
+   - Amount
+   - Timestamp
+   - Status
+   - Stellar transaction hash
+
+4. **Reputation**
+   - User ID
+   - Score components (backing, referring, creation)
+   - History of reputation-earning actions
+   - Badges and achievements
+
+### APIs and Integrations
+
+1. **Privy API**
+   - Social authentication
+   - User identity management
+   - Stellar wallet management
+
+2. **Stellar Network API**
+   - Transaction submission and monitoring
+
+3. **Soroban Contract API**
+   - Smart contract deployment and interaction
+   - Event monitoring and processing
+
+4. **Social Platform APIs**
+   - X API for sharing and analytics
+   - Farcaster API for integration and authentication
+
+### Simplified Infrastructure Requirements (Hackathon-Focused)
+
+1. **Hosting**
+   - Vercel for frontend deployment
+   - Railway or Render for backend services
+
+2. **Database**
+   - PostgreSQL for relational data
+   - Redis for caching (optional for hackathon)
+
+3. **Security**
+   - Privy for authentication security
+   - Environment variable management
+   - Basic input validation
+
+4. **Monitoring**
+   - Console logging with structured format
+   - Simple error tracking
+
+## Development Roadmap
+
+### Phase 1: MVP Foundation
+
+1. **Core Authentication System**
+   - Implement Privy social login
+   - Set up session management
+
+2. **Basic Wallet Infrastructure**
+   - Integrate Privy's Stellar wallet API
+   - Create basic transaction signing flow
+
+3. **Swipe Interface Prototype**
+   - Build card-based project discovery UI
+   - Implement swipe mechanics
+   - Create project display templates
+
+4. **Initial Smart Contract Development**
+   - Develop basic funding contract logic
+   - Set up contract interaction layer
+
+5. **Minimal Viable Backend**
+   - Create user profile management
+   - Implement project database
+   - Set up basic API endpoints
+
+### Phase 2: Core Functionality
+
+1. **Complete Funding Flow**
+   - Connect swipe interface to transaction creation
+   - Implement funding confirmation and feedback
+   - Develop project funding status tracking
+
+2. **Enhanced Project Discovery**
+   - Implement categorization and filtering
+   - Create personalized recommendations
+   - Develop search functionality
+
+3. **Basic Reputation System**
+   - Implement reputation scoring logic
+   - Create on-chain reputation tracking
+   - Develop basic leaderboards
+
+4. **Social Sharing Mechanics**
+   - Implement referral link generation
+   - Create sharing flow to social platforms
+   - Set up referral tracking and attribution
+
+5. **User Engagement Features**
+   - Implement daily swipe quota
+   - Create achievement system
+   - Develop personalized feed algorithm
+
+### Phase 3: Enhancement & Expansion
+
+1. **Advanced Smart Contract Features**
+   - Implement milestone-based fund release
+   - Develop voting mechanisms for project changes
+   - Create refund functionality for failed projects
+
+2. **Creator Tools**
+   - Build project creation interface
+   - Implement project management dashboard
+   - Create update and communication tools
+
+3. **Enhanced Social Features**
+   - Develop in-app social profiles
+   - Implement following/follower system
+   - Create activity feeds and notifications
+
+4. **Advanced Reputation & Rewards**
+   - Implement tiered reputation system
+   - Create badges and achievements
+   - Develop special privileges for high-reputation users
+
+5. **Analytics & Insights**
+   - Build project performance analytics
+   - Implement user behavior tracking
+   - Create recommendation algorithm improvements
+
+## Logical Dependency Chain
+
+1. **Foundation Layer (Must Complete First)**
+   - Authentication system with Privy
+   - Privy Stellar wallet integration
+   - Core smart contract development
+   - Minimal backend services
+
+2. **User Experience Layer**
+   - Swipe interface implementation
+   - Project discovery and display
+   - Transaction flow and confirmation
+   - Feedback and notification system
+
+3. **Financial Layer**
+   - Complete funding flow
+   - Transaction monitoring and confirmation
+   - Balance management and display
+
+4. **Social Layer**
+   - Reputation system implementation
+   - Social sharing and referrals
+   - Activity feeds and social profiles
+   - Leaderboards and achievements
+
+5. **Expansion Layer**
+   - Creator tools and project management
+   - Advanced smart contract features
+   - Analytics and insights
+   - Community governance features
+
+## Risks and Mitigations
+
+### Technical Challenges
+
+1. **Risk**: Integration complexity with Privy's Stellar wallet API
+   **Mitigation**: Start with simplified integration focusing on core functionality; engage with Privy's developer community for guidance; create comprehensive test suite.
+
+2. **Risk**: Smart contract security vulnerabilities
+   **Mitigation**: Conduct thorough security audits; implement formal verification; start with simpler contract logic and iterate; use established contract patterns.
+
+3. **Risk**: Performance issues with blockchain transactions
+   **Mitigation**: Implement optimistic UI updates; use caching strategies; consider layer-2 solutions if needed; optimize batch processing for transactions.
+
+### MVP Scope Management
+
+1. **Risk**: Feature creep extending development timeline
+   **Mitigation**: Strictly prioritize features based on user value; implement clear acceptance criteria for MVP; create separate backlogs for post-MVP features.
+
+2. **Risk**: Overengineering initial implementation
+   **Mitigation**: Focus on proving core value proposition first; defer complex features; use rapid prototyping to validate assumptions; get early user feedback.
+
+3. **Risk**: Difficulty balancing simplicity with functionality
+   **Mitigation**: Conduct usability testing early and often; implement progressive disclosure of features; focus on core user flows first.
+
+## Appendix
+
+### Technical Specifications
+
+1. **Stellar Network Requirements**
+   - Network: Mainnet (production), Testnet (development)
+   - Transaction fees: Covered by application initially
+   - Account minimum balance: 1 XLM per user account
+
+2. **Smart Contract Specifications**
+   - Funding Contract: Implements escrow functionality with conditional release
+   - Gas optimization strategies documented
+
+3. **Security Considerations**
+   - Privy authentication security model
+   - Transaction signing security model
+   - Data encryption standards
+   - Compliance requirements 
