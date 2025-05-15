@@ -377,7 +377,7 @@ export function SwipeCardStackV2({
 
     // Only prevent default if we're not scrolling vertically
     if (isScrolling.current) return
-    
+
     // We're doing a horizontal swipe, prevent page scrolling
     e.preventDefault()
 
