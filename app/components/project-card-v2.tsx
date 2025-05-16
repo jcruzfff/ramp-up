@@ -35,7 +35,6 @@ interface ProjectCardV2Props {
     }> 
   }
   mode?: "swipe" | "list"
-  onSwipeLeft?: () => void
   onSwipeRight?: () => void
   onDonate?: () => void
   onShowCommunityNotes?: () => void
@@ -50,7 +49,6 @@ interface ProjectCardV2Props {
 export function ProjectCardV2({
   project,
   mode = "swipe",
-  onSwipeLeft,
   onSwipeRight,
   onDonate,
   onShowCommunityNotes,
@@ -324,14 +322,7 @@ export function ProjectCardV2({
             {/* Action Buttons */}
             <div className="flex flex-col mt-6">
               <div className="flex justify-between items-center text-sm text-slate-500">
-                <motion.button
-                  whileHover={{ scale: 1.05, x: -5 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="flex items-center gap-1 px-2 py-1 hover:bg-slate-100 rounded-md transition-colors"
-                  onClick={(e) => handleButtonClick(e, onSwipeLeft)}
-                >
-                  <X className="h-4 w-4" /> Skip
-                </motion.button>
+                <div></div>
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
@@ -359,15 +350,7 @@ export function ProjectCardV2({
                     exit={{ opacity: 0 }}
                     className="absolute inset-0 pointer-events-none flex items-center justify-center"
                   >
-                    <div className="flex items-center gap-8 text-white text-lg font-medium">
-                      <motion.div
-                        animate={{ x: [-10, 0, -10] }}
-                        transition={{ repeat: Number.POSITIVE_INFINITY, duration: 1.5 }}
-                        className="flex items-center gap-2 bg-red-500/80 px-4 py-2 rounded-full"
-                      >
-                        <X className="h-5 w-5" />
-                        <span>Skip</span>
-                      </motion.div>
+                    <div className="flex items-center justify-center text-white text-lg font-medium">
                       <motion.div
                         animate={{ x: [10, 0, 10] }}
                         transition={{ repeat: Number.POSITIVE_INFINITY, duration: 1.5 }}

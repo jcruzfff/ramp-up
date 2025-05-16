@@ -8,15 +8,23 @@ import { Header } from "@/app/components/Header"
 import { BottomNav } from "@/app/components/bottom-nav"
 import { Button } from "@/app/components/ui/button"
 import { Card, CardContent } from "@/app/components/ui/card"
-import { Upload, LinkIcon, Flame } from "lucide-react"
+import { Upload, LinkIcon, Flame, Clock } from "lucide-react"
 import { Switch } from "@/app/components/ui/switch"
 import { Label } from "@/app/components/ui/label"
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/app/components/ui/select"
 
 export default function CreateProject() {
   const router = useRouter()
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [websiteUrl, setWebsiteUrl] = useState("")
+  const [timeframe, setTimeframe] = useState("1month")
   const [sponsorBoost, setSponsorBoost] = useState(false)
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -70,6 +78,29 @@ export default function CreateProject() {
                   onChange={(e) => setDescription(e.target.value)}
                   required
                 />
+              </div>
+
+              <div>
+                <label htmlFor="timeframe" className="block text-sm font-medium mb-2">
+                  Funding Timeframe
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                    <Clock className="h-4 w-4 text-slate-400" />
+                  </div>
+                  <Select value={timeframe} onValueChange={setTimeframe}>
+                    <SelectTrigger className="w-full p-3 pl-10 border border-slate-200 rounded-lg">
+                      <SelectValue placeholder="Select a timeframe" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1week">1 Week</SelectItem>
+                      <SelectItem value="1month">1 Month</SelectItem>
+                      <SelectItem value="6months">6 Months</SelectItem>
+                      <SelectItem value="1year">1 Year</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <p className="text-xs text-slate-500 mt-1">How long would you like to collect funds?</p>
               </div>
 
               <div>

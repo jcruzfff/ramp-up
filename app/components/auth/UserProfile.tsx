@@ -10,7 +10,7 @@ interface UserProfileProps {
 }
 
 export default function UserProfile({ className = '' }: UserProfileProps) {
-  const { isAuthenticated, isLoading, getUserName, getUserEmail, getUserAvatar } = useAuth();
+  const { isAuthenticated, isLoading, userName, userEmail } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -36,10 +36,6 @@ export default function UserProfile({ className = '' }: UserProfileProps) {
     return null;
   }
 
-  const name = getUserName();
-  const email = getUserEmail();
-  const avatar = getUserAvatar();
-
   return (
     <div className={`relative ${className}`} ref={dropdownRef}>
       <button 
@@ -49,23 +45,13 @@ export default function UserProfile({ className = '' }: UserProfileProps) {
         aria-haspopup="true"
       >
         <div className="flex-shrink-0 h-10 w-10 rounded-full overflow-hidden bg-gray-200">
-          {avatar ? (
-            <Image
-              src={avatar}
-              alt={`${name}'s avatar`}
-              width={40}
-              height={40}
-              className="object-cover"
-            />
-          ) : (
-            <div className="flex items-center justify-center h-full w-full bg-blue-100 text-blue-500">
-              {name?.[0]?.toUpperCase() || '?'}
-            </div>
-          )}
+          <div className="flex items-center justify-center h-full w-full bg-blue-100 text-blue-500">
+            {userName?.[0]?.toUpperCase() || '?'}
+          </div>
         </div>
         <div className="hidden sm:block text-left">
-          <p className="font-medium">{name}</p>
-          {email && <p className="text-sm text-gray-500">{email}</p>}
+          <p className="font-medium">{userName}</p>
+          {userEmail && <p className="text-sm text-gray-500">{userEmail}</p>}
         </div>
       </button>
 
@@ -73,8 +59,8 @@ export default function UserProfile({ className = '' }: UserProfileProps) {
       {isOpen && (
         <div className="absolute right-0 mt-2 w-48 py-2 bg-white rounded-md shadow-lg z-10 border border-gray-200">
           <div className="px-4 py-2 border-b border-gray-100 sm:hidden">
-            <p className="font-medium">{name}</p>
-            {email && <p className="text-sm text-gray-500">{email}</p>}
+            <p className="font-medium">{userName}</p>
+            {userEmail && <p className="text-sm text-gray-500">{userEmail}</p>}
           </div>
           <a 
             href="/dashboard" 

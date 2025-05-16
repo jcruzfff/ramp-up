@@ -1,99 +1,75 @@
-import { PasskeyKit } from "passkey-kit";
+import { PasskeyKit, SACClient } from "passkey-kit";
 import { Server } from "@stellar/stellar-sdk/rpc";
-import { SACClient } from "passkey-kit";
 import { Transaction, FeeBumpTransaction } from "@stellar/stellar-sdk";
 
-// Create PasskeyKit instance for client-side operations
-export const passkeyKit = new PasskeyKit({
-  rpcUrl: process.env.NEXT_PUBLIC_STELLAR_RPC_URL || "https://soroban-testnet.stellar.org",
-  networkPassphrase: process.env.NEXT_PUBLIC_STELLAR_NETWORK_PASSPHRASE || "Test SDF Network ; September 2015",
-  factoryContractId: process.env.NEXT_PUBLIC_FACTORY_CONTRACT_ID || "",
-});
+// Configure environment variables with defaults
+const STELLAR_RPC_URL = process.env.NEXT_PUBLIC_STELLAR_RPC_URL || "https://soroban-testnet.stellar.org";
+const STELLAR_NETWORK_PASSPHRASE = process.env.NEXT_PUBLIC_STELLAR_NETWORK_PASSPHRASE || "Test SDF Network ; September 2015";
+const NATIVE_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_NATIVE_CONTRACT_ADDRESS || "";
 
-// Configure RPC server for network interaction
-export const rpc = new Server(
-  process.env.NEXT_PUBLIC_STELLAR_RPC_URL || "https://soroban-testnet.stellar.org"
-);
+// Create RPC Server instance
+export const rpc = new Server(STELLAR_RPC_URL);
 
-// Configure SAC client for native XLM asset interaction
+// Create SAC client for asset operations
 const sac = new SACClient({
-  rpcUrl: process.env.NEXT_PUBLIC_STELLAR_RPC_URL || "https://soroban-testnet.stellar.org",
-  networkPassphrase: process.env.NEXT_PUBLIC_STELLAR_NETWORK_PASSPHRASE || "Test SDF Network ; September 2015",
+  rpcUrl: STELLAR_RPC_URL,
+  networkPassphrase: STELLAR_NETWORK_PASSPHRASE,
 });
 
 // Export native XLM client if the contract address is available
-export const native = process.env.NEXT_PUBLIC_NATIVE_CONTRACT_ADDRESS
-  ? sac.getSACClient(process.env.NEXT_PUBLIC_NATIVE_CONTRACT_ADDRESS)
-  : null;
+export const native = NATIVE_CONTRACT_ADDRESS ? sac.getSACClient(NATIVE_CONTRACT_ADDRESS) : null;
 
-// Helper functions for wallet operations
-export async function createWallet(rpName: string, userId: string) {
-  try {
-    const wallet = await passkeyKit.createWallet(rpName, userId);
-    return wallet;
-  } catch (error) {
-    console.error("Error creating wallet:", error);
-    throw error;
-  }
-}
-
-export async function connectWallet(userId: string) {
-  try {
-    const wallet = await passkeyKit.connectWallet(userId);
-    return wallet;
-  } catch (error) {
-    console.error("Error connecting wallet:", error);
-    throw error;
-  }
-}
-
-// LocalStorage keys
+// LocalStorage keys for persistence
 const STORAGE_KEY_PASSKEY_ID = 'stellar-swipe:passkeyId';
 const STORAGE_KEY_CONTRACT_ID = 'stellar-swipe:contractId';
 
-// Create a function to initialize the account to ensure it only runs on the client side
-let accountInstance: PasskeyKit | null = null;
+/**
+ * Create and return a PasskeyKit instance
+ * This follows the pattern from Stellar documentation where we export a function
+ * that returns the PasskeyKit instance, ensuring it only runs on the client side
+ */
+let passkeyKitInstance: PasskeyKit | null = null;
 
-function getAccount() {
-  if (typeof window === 'undefined') {
-    return null; // Return null during server-side rendering
-  }
-  
-  if (!accountInstance) {
-    // Get the domain for WebAuthn registration
-    const domain = window.location.hostname;
-    console.log("Domain for WebAuthn:", domain);
-    
-    // In development, we use localhost or 127.0.0.1
-    const validDomain = domain === 'localhost' || domain === '127.0.0.1' ? domain : domain;
-    
-    accountInstance = new PasskeyKit({
-      rpcUrl: process.env.NEXT_PUBLIC_STELLAR_RPC_URL || "https://soroban-testnet.stellar.org",
-      networkPassphrase: process.env.NEXT_PUBLIC_STELLAR_NETWORK_PASSPHRASE || "Test SDF Network ; September 2015",
-      walletWasmHash: process.env.NEXT_PUBLIC_WALLET_WASM_HASH || '', // Required for wallet creation
-      // Only use supported parameters based on the PasskeyKit type
-    });
-    
-    console.log("Initialized PasskeyKit with domain:", validDomain);
-  }
-  
-  return accountInstance;
-}
-
-// Safer account access with null checking
 export function account() {
-  const acc = getAccount();
-  return acc;
+  // Only run in browser environment
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  if (!passkeyKitInstance) {
+    try {
+      passkeyKitInstance = new PasskeyKit({
+        rpcUrl: STELLAR_RPC_URL,
+        networkPassphrase: STELLAR_NETWORK_PASSPHRASE,
+        // Configure appropriate options and remove unsupported ones
+        walletWasmHash: process.env.NEXT_PUBLIC_WALLET_WASM_HASH || '', 
+      });
+      console.log("PasskeyKit initialized successfully");
+    } catch (error) {
+      console.error("Failed to initialize PasskeyKit:", error);
+      return null;
+    }
+  }
+  
+  return passkeyKitInstance;
 }
 
 /**
- * Function to get contract ID from the passkey ID (used for login)
+ * Function to look up contract ID from passkey ID
+ * Used during wallet connection
  */
 export const getContractId = async (passkeyId: string): Promise<string | undefined> => {
   try {
-    // This would typically call the Mercury reverse-lookup service
-    // For now, use a simplified approach with localStorage
-    return localStorage.getItem(`${passkeyId}:contractId`) || undefined;
+    if (typeof window === 'undefined') return undefined;
+    
+    // First check local storage
+    const contractId = localStorage.getItem(`${passkeyId}:contractId`);
+    if (contractId) return contractId;
+    
+    // In production, you would call your Mercury API endpoint
+    // return fetch(`/api/contract/${passkeyId}`).then(res => res.text());
+    
+    return undefined;
   } catch (error) {
     console.error("Error getting contract ID:", error);
     return undefined;
@@ -101,54 +77,23 @@ export const getContractId = async (passkeyId: string): Promise<string | undefin
 };
 
 /**
- * Create a wallet for a user who has logged in with Privy
- * @param privyUserId The Privy user ID to associate with the wallet
+ * Create a wallet for a user using PasskeyKit
+ * @param userId - The user ID for the wallet
+ * @param rpName - The relying party name for WebAuthn
  */
-export const createWalletForPrivyUser = async (privyUserId: string) => {
+export const createWallet = async (userId: string, rpName: string) => {
   try {
     const passkeyKit = account();
     if (!passkeyKit) {
       throw new Error("PasskeyKit not initialized - only available on client side");
     }
+
+    // Normalize userId if needed (WebAuthn requires 1-64 bytes)
+    const normalizedUserId = userId.length > 64 ? String(Math.abs(hashCode(userId))) : userId;
     
-    console.log("Original privyUserId:", privyUserId);
-    console.log("Original privyUserId length:", privyUserId.length);
-    
-    // WebAuthn requires a userId that's 1-64 bytes, not characters
-    // Create a reproducible short ID using a simple hash function
-    const userId = String(Math.abs(hashCode(privyUserId)));
-    
-    console.log("Hashed userId:", userId);
-    console.log("Hashed userId length:", userId.length);
-    
-    // Get the current domain
-    const domain = window.location.hostname;
-    
-    // Fetch proper WebAuthn credential creation options from our API
-    const response = await fetch('/api/webauthn/options', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        userId: userId,
-        domain: domain,
-      }),
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch WebAuthn options: ${response.status}`);
-    }
-    
-    const { options } = await response.json();
-    console.log('Got WebAuthn options from API:', options);
-    
-    // Create a real wallet - no fallback to mock wallet
-    console.log("Creating real wallet...");
-    const wallet = await passkeyKit.createWallet(
-      options.rp.name,
-      userId
-    );
+    // Create the wallet
+    console.log("Creating wallet with rpName:", rpName, "and userId:", normalizedUserId);
+    const wallet = await passkeyKit.createWallet(rpName, normalizedUserId);
     
     if (!wallet) {
       throw new Error('Failed to create wallet: no wallet returned');
@@ -157,13 +102,13 @@ export const createWalletForPrivyUser = async (privyUserId: string) => {
     // Store the mapping in localStorage
     localStorage.setItem(STORAGE_KEY_PASSKEY_ID, wallet.keyIdBase64);
     localStorage.setItem(STORAGE_KEY_CONTRACT_ID, wallet.contractId);
-    localStorage.setItem(`${privyUserId}:passkeyId`, wallet.keyIdBase64);
+    localStorage.setItem(`${userId}:passkeyId`, wallet.keyIdBase64);
     localStorage.setItem(`${wallet.keyIdBase64}:contractId`, wallet.contractId);
     
     return {
       passkeyId: wallet.keyIdBase64,
       contractId: wallet.contractId,
-      address: wallet.contractId,
+      address: wallet.contractId
     };
   } catch (error) {
     console.error("Error creating wallet:", error);
@@ -172,75 +117,71 @@ export const createWalletForPrivyUser = async (privyUserId: string) => {
 };
 
 /**
- * Simple string hash function
- * Converts any string to a number that can be used as a WebAuthn user ID
+ * Connect to an existing wallet using PasskeyKit
+ * @param options - Connection options including keyId
  */
-function hashCode(str: string): number {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; // Convert to 32bit integer
-  }
-  return hash;
-}
-
-/**
- * Connect an existing wallet for a Privy user
- * @param privyUserId The Privy user ID to look up
- */
-export const connectWalletForPrivyUser = async (privyUserId: string) => {
+export const connectWallet = async (options: {
+  keyId?: string;
+  rpId?: string;
+}) => {
   try {
     const passkeyKit = account();
     if (!passkeyKit) {
       throw new Error("PasskeyKit not initialized - only available on client side");
     }
     
-    // Get the passkey ID associated with this Privy user
-    const passkeyId = localStorage.getItem(`${privyUserId}:passkeyId`);
+    // Connect to the existing wallet
+    const wallet = await passkeyKit.connectWallet({
+      ...options,
+      getContractId
+    });
+    
+    return wallet;
+  } catch (error) {
+    console.error("Error connecting wallet:", error);
+    throw new Error(`Failed to connect wallet: ${error instanceof Error ? error.message : String(error)}`);
+  }
+};
+
+/**
+ * Connect a wallet for a specific user
+ * @param userId - The user ID to look up the passkey for
+ */
+export const connectWalletForUser = async (userId: string) => {
+  try {
+    // Get the passkey ID associated with this user
+    const passkeyId = localStorage.getItem(`${userId}:passkeyId`);
     
     if (!passkeyId) {
       throw new Error("No wallet found for this user");
     }
     
-    // Connect the wallet using the PasskeyKit
-    const { keyIdBase64, contractId } = await passkeyKit.connectWallet({
-      keyId: passkeyId,
-      getContractId
-    });
-    
-    return {
-      passkeyId: keyIdBase64,
-      contractId,
-      address: contractId,
-    };
+    // Use our standard connectWallet function
+    return connectWallet({ keyId: passkeyId });
   } catch (error) {
-    console.error("Error connecting wallet:", error);
-    throw new Error(`Failed to connect wallet: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    console.error("Error connecting wallet for user:", error);
+    throw error;
   }
 };
 
 /**
- * Check if a Privy user has a wallet
- * @param privyUserId The Privy user ID to check
+ * Check if a user has a wallet
+ * @param userId - The user ID to check
  */
-export const hasWallet = (privyUserId: string): boolean => {
+export const hasWallet = (userId: string): boolean => {
   if (typeof window === 'undefined') return false;
-  return !!localStorage.getItem(`${privyUserId}:passkeyId`);
+  return !!localStorage.getItem(`${userId}:passkeyId`);
 };
 
 /**
- * Get wallet info for a Privy user
- * @param privyUserId The Privy user ID to check
+ * Get stored wallet info for a user
+ * @param userId - The user ID to check
  */
-export const getWalletInfo = (privyUserId: string) => {
+export const getWalletInfo = (userId: string) => {
   if (typeof window === 'undefined') return null;
   
-  const passkeyId = localStorage.getItem(`${privyUserId}:passkeyId`);
-  
-  if (!passkeyId) {
-    return null;
-  }
+  const passkeyId = localStorage.getItem(`${userId}:passkeyId`);
+  if (!passkeyId) return null;
   
   const contractId = localStorage.getItem(`${passkeyId}:contractId`);
   
@@ -252,8 +193,8 @@ export const getWalletInfo = (privyUserId: string) => {
 };
 
 /**
- * Check the balance of a wallet
- * @param contractId The wallet's contract ID/address
+ * Get balance for a wallet
+ * @param contractId - The wallet's contract ID
  */
 export const getBalance = async (contractId: string) => {
   try {
@@ -270,47 +211,29 @@ export const getBalance = async (contractId: string) => {
 };
 
 /**
- * Prepare a transaction to send XLM
- * @param fromAddress Sender wallet address
- * @param toAddress Recipient wallet address
- * @param amount Amount to send in stroops (1 XLM = 10,000,000 stroops)
+ * Simple string hash function for WebAuthn user IDs
  */
-export const prepareTransaction = async (fromAddress: string, toAddress: string, amount: string) => {
-  try {
-    if (!native) {
-      throw new Error("Native asset contract address not configured");
-    }
-    
-    // Create transaction to transfer XLM
-    const tx = await native.transfer({
-      from: fromAddress,
-      to: toAddress,
-      amount: BigInt(amount), // Convert string to BigInt
-    });
-    
-    return tx;
-  } catch (error) {
-    console.error("Error preparing transaction:", error);
-    throw error;
+function hashCode(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
   }
-};
-
-// Define a more specific type for passkey-kit transactions, as precise as we can without the exact type
-interface PasskeyTransaction {
-  [key: string]: unknown;
+  return hash;
 }
 
 /**
- * Sign a transaction using the user's passkey
- * @param tx The transaction to sign
+ * Sign a transaction using PasskeyKit
  */
-export const signTransaction = async (tx: PasskeyTransaction) => {
+export const signTransaction = async (tx: any) => {
   try {
     const passkeyKit = account();
     if (!passkeyKit) {
       throw new Error("PasskeyKit not initialized - only available on client side");
     }
     
+    // Sign the transaction
     const signedTx = await passkeyKit.sign(tx);
     return signedTx;
   } catch (error) {
@@ -320,8 +243,7 @@ export const signTransaction = async (tx: PasskeyTransaction) => {
 };
 
 /**
- * Submit a signed transaction to the Stellar network
- * @param signedTx The signed transaction
+ * Submit a transaction to the Stellar network
  */
 export const submitTransaction = async (signedTx: Transaction | FeeBumpTransaction) => {
   try {

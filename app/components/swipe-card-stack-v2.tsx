@@ -165,7 +165,7 @@ export function SwipeCardStackV2({
     currentRotation.current = 0
   }
 
-  // Use useCallback for functions referenced in useEffect deps
+  // Handle swipeLeft but don't display the button
   const handleSwipeLeft = useCallback(() => {
     if (isAnimating || isExpanded) return
     setIsAnimating(true)
@@ -503,7 +503,6 @@ export function SwipeCardStackV2({
         <ProjectCardV2
           project={currentProject}
           mode="swipe"
-          onSwipeLeft={handleSwipeLeft}
           onSwipeRight={handleSwipeRight}
           onShowCommunityNotes={() => onShowCommunityNotesAction(currentProject)}
           showOverlay={!!swipeDirection}
@@ -560,7 +559,7 @@ export function SwipeCardStackV2({
 
       {!isDragging && !isExpanded && !isAnimating && (
         <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2 text-xs text-slate-400 swipe-hint">
-          ← Swipe to interact →
+          Swipe right to donate →
         </div>
       )}
     </div>

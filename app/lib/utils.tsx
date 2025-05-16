@@ -5,6 +5,55 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+/**
+ * Truncates a blockchain address to a shorter format for display
+ * Example: "C1234567890123456789012345678901234567890" -> "C123...7890"
+ */
+export function truncateAddress(address: string | null, prefixLength = 4, suffixLength = 4): string {
+  if (!address) return '';
+  if (address.length <= prefixLength + suffixLength + 3) return address;
+  
+  return `${address.substring(0, prefixLength)}...${address.substring(address.length - suffixLength)}`;
+}
+
+/**
+ * Get the Stellar explorer URL for an account based on the current network
+ * @param address The Stellar account address
+ * @returns URL to view the account in Stellar Explorer
+ */
+export function getStellarAccountExplorerUrl(address: string): string {
+  const network = process.env.NEXT_PUBLIC_STELLAR_NETWORK === 'PUBLIC' ? 'public' : 'testnet';
+  return `https://stellar.expert/explorer/${network}/account/${address}`;
+}
+
+/**
+ * Get the Stellar explorer URL for a transaction based on the current network
+ * @param txHash The transaction hash/ID
+ * @returns URL to view the transaction in Stellar Explorer
+ */
+export function getStellarTransactionExplorerUrl(txHash: string): string {
+  const network = process.env.NEXT_PUBLIC_STELLAR_NETWORK === 'PUBLIC' ? 'public' : 'testnet';
+  return `https://stellar.expert/explorer/${network}/tx/${txHash}`;
+}
+
+/**
+ * Format Stellar balance for display
+ * @param balance The balance amount as string
+ * @param decimals Number of decimal places to display
+ * @returns Formatted balance string
+ */
+export function formatStellarBalance(balance: string, decimals: number = 7): string {
+  try {
+    // Parse the balance as a float and fix to specified decimal places
+    const formattedBalance = parseFloat(balance).toFixed(decimals);
+    
+    // Remove trailing zeros after the decimal point
+    return formattedBalance.replace(/\.?0+$/, '');
+  } catch {
+    return '0';
+  }
+}
+
 // Theme colors
 export const themeColors = {
   primary: "#3B82F6", // Blue 500

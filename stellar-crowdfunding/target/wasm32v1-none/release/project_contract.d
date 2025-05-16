@@ -1,0 +1,1 @@
+/Users/jonathancruz/Desktop/ramp-up/stellar-crowdfunding/target/wasm32v1-none/release/project_contract.wasm: /Users/jonathancruz/Desktop/ramp-up/stellar-crowdfunding/contracts/project_contract/src/lib.rs

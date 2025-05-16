@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import PrivyProvider from "@/app/providers/PrivyProvider";
+import AuthProvider from "@/app/providers/AuthProvider";
+import { MenuProvider } from "@/app/context/MenuContext";
 import { Toaster } from "sonner";
 
 const geistSans = Geist({
@@ -27,13 +28,15 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <PrivyProvider>
+        <AuthProvider>
+          <MenuProvider>
             <div className="min-h-screen flex flex-col">
               {/* Main content */}
               <main className="flex-grow">{children}</main>
               <Toaster position="top-center" richColors />
             </div>
-        </PrivyProvider>
+          </MenuProvider>
+        </AuthProvider>
       </body>
     </html>
   );
