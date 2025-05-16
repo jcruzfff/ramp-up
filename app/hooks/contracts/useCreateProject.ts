@@ -2,16 +2,25 @@ import { useState, useCallback } from 'react';
 import { useStellarClient } from '@/app/hooks/useStellarClient';
 import { useAuth } from '@/app/hooks/useAuth';
 import { useRouter } from 'next/navigation';
+import { useFactoryContract } from './useFactoryContract';
 
 interface CreateProjectFormData {
   title: string;
   description: string;
   imageUrl: string;
   daysUntilDeadline: number;
+  goalAmount?: number;
+  categories?: string[];
+  websiteUrl?: string;
+}
+
+interface ProjectMetadata extends CreateProjectFormData {
+  projectId: string;
 }
 
 export function useCreateProject() {
-  const { isConnected, connect, createProject } = useStellarClient();
+  const { isConnected, connect } = useStellarClient();
+  const { createProject: createContractProject } = useFactoryContract();
   const { isAuthenticated } = useAuth();
   const router = useRouter();
   
@@ -49,16 +58,23 @@ export function useCreateProject() {
         throw new Error('Project deadline must be in the future');
       }
       
-      // Create the project on the blockchain
-      const projectId = await createProject(
-        formData.title,
-        formData.description,
-        formData.imageUrl || '', // Default to empty string if no image
-        formData.daysUntilDeadline
-      );
+      // Create the project using the factory contract - this will generate a Soroban transaction
+      const { projectId } = await createContractProject({
+        title: formData.title,
+        description: formData.description,
+        imageUrl: formData.imageUrl || '',
+        daysUntilDeadline: formData.daysUntilDeadline,
+        goalAmount: BigInt(formData.goalAmount || 1000) 
+      });
       
       // Store the new project ID
       setNewProjectId(projectId);
+      
+      // Save additional project metadata through API
+      await saveProjectMetadata({
+        projectId,
+        ...formData
+      });
       
       // Return the project ID for further actions
       return projectId;
@@ -69,7 +85,30 @@ export function useCreateProject() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [isConnected, connect, isAuthenticated, createProject]);
+  }, [isConnected, connect, isAuthenticated, createContractProject]);
+
+  // Function to save additional project metadata via API
+  const saveProjectMetadata = async (data: ProjectMetadata) => {
+    try {
+      const response = await fetch('/api/projects', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save project metadata to API');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error saving project metadata:', error);
+      // We don't want to fail the whole creation if just the metadata fails
+      // so we log the error but don't rethrow it
+    }
+  };
 
   // Function to navigate to the newly created project
   const navigateToProject = useCallback((projectId: string) => {

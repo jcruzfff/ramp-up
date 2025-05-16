@@ -34,6 +34,7 @@ export function Header({
   className,
   variant = "default", // Default to original header
 }: HeaderProps) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { isAuthenticated } = useAuth();
   const [notifications, setNotifications] = useState(3)
   const router = useRouter()

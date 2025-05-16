@@ -8,9 +8,11 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { PrivacyToggle } from "@/components/privacy-toggle"
 import { StreakBadge } from "@/components/streak-badge"
-import StellarWallet from "@/app/components/StellarWallet"
+import UserProjects from "@/app/components/UserProjects"
 import { useAuth } from '@/app/hooks/useAuth'
 import { useRouter } from "next/navigation"
+import { DefaultDonationSetting } from "@/app/components/settings/DefaultDonationSetting"
+import { useDefaultDonation } from "@/app/hooks/useDefaultDonation"
 
 // Mock data - replace with actual data fetching
 const achievements = [
@@ -88,7 +90,9 @@ export default function ProfilePage() {
   const router = useRouter();
   const [isPublic, setIsPublic] = useState(true);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [activeTab, setActiveTab] = useState("overview");
+  const { donationAmount, updateDonationAmount, isInitialized } = useDefaultDonation();
   
   // Redirect unauthenticated users to home
   if (!isAuthenticated) {
@@ -121,7 +125,7 @@ export default function ProfilePage() {
         <Tabs defaultValue="overview" className="w-full" onValueChange={setActiveTab}>
           <TabsList className="w-full grid grid-cols-3 mb-4">
             <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="wallet">Wallet</TabsTrigger>
+            <TabsTrigger value="wallet">Projects</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
           
@@ -223,10 +227,18 @@ export default function ProfilePage() {
           </TabsContent>
           
           <TabsContent value="wallet" className="space-y-4">
-            <StellarWallet />
+            <UserProjects />
           </TabsContent>
           
           <TabsContent value="settings" className="space-y-4">
+            {/* Default donation amount setting */}
+            {isInitialized && (
+              <DefaultDonationSetting
+                initialAmount={donationAmount}
+                onDonationChange={updateDonationAmount}
+              />
+            )}
+            
             <PrivacyToggle 
               isPublic={isPublic}
               onToggleAction={setIsPublic}

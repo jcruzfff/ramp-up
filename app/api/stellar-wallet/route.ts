@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import * as StellarSdk from '@stellar/stellar-sdk';
 
 // Mock database of wallets (in production would use a real database)
 const walletDB = new Map<string, {
@@ -33,14 +34,20 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Create a new stellar wallet (in a real app, this would integrate with Stellar SDK)
+    // Create a valid Stellar keypair using the SDK
+    const keypair = StellarSdk.Keypair.random();
+    const stellarAddress = keypair.publicKey();
+    
+    // Debug log to verify address format
+    console.log(`Generated Stellar address: ${stellarAddress}`);
+    console.log(`Address validity: ${StellarSdk.StrKey.isValidEd25519PublicKey(stellarAddress)}`);
+    
     const walletId = `wallet_${Date.now().toString(36)}_${Math.random().toString(36).substring(2)}`;
-    const stellarAddress = `G${Array(56).fill(0).map(() => 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'[Math.floor(Math.random() * 32)]).join('')}`;
     
     const newWallet = {
       id: walletId,
       address: stellarAddress,
-      chainType: 'stellar',
+      chainType: 'testnet',
       createdAt: new Date(),
     };
 
@@ -48,6 +55,7 @@ export async function POST(req: NextRequest) {
     walletDB.set(userId, newWallet);
     
     console.log(`Created Stellar wallet for user ${userId}: ${walletId}`);
+    console.log(`Wallet address: ${stellarAddress}`);
 
     return NextResponse.json({
       success: true,

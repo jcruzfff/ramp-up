@@ -48,7 +48,7 @@ export function SwipeSettings({
         <div className="mb-4">
           <p className="text-sm text-slate-500 mb-2">Default donation amount</p>
           <div className="grid grid-cols-4 gap-2">
-            {swipeAmounts.map((amount) => (
+            {swipeAmounts.map((amount: { value: number; label: string }) => (
               <Button
                 key={amount.value}
                 variant={defaultAmount === amount.value ? "default" : "outline"}

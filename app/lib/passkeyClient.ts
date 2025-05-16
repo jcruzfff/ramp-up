@@ -2,10 +2,27 @@ import { PasskeyKit, SACClient } from "passkey-kit";
 import { Server } from "@stellar/stellar-sdk/rpc";
 import { Transaction, FeeBumpTransaction } from "@stellar/stellar-sdk";
 
+
 // Configure environment variables with defaults
 const STELLAR_RPC_URL = process.env.NEXT_PUBLIC_STELLAR_RPC_URL || "https://soroban-testnet.stellar.org";
 const STELLAR_NETWORK_PASSPHRASE = process.env.NEXT_PUBLIC_STELLAR_NETWORK_PASSPHRASE || "Test SDF Network ; September 2015";
 const NATIVE_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_NATIVE_CONTRACT_ADDRESS || "";
+const FACTORY_CONTRACT_ID = process.env.NEXT_PUBLIC_FACTORY_CONTRACT_ADDRESS || "CAXTCVMYOYPBSTISOJVBTUZ6NFNA5YMCWWTJNXYI65HSVDLKT3NJMRZ";
+// Make sure WALLET_WASM_HASH is never undefined with a default empty string
+const WALLET_WASM_HASH = process.env.NEXT_PUBLIC_WALLET_WASM_HASH || "ecd990f0b45ca6817149b6175f79b32efb442f35731985a084131e8265c4cd90";
+
+// Log environment variable loading for debugging
+if (typeof window !== 'undefined') {
+  console.log("Environment variables loaded for PasskeyKit:", {
+    STELLAR_RPC_URL,
+    STELLAR_NETWORK_PASSPHRASE: STELLAR_NETWORK_PASSPHRASE?.substring(0, 20) + '...',
+    NATIVE_CONTRACT_ADDRESS: NATIVE_CONTRACT_ADDRESS || "(not set)",
+    FACTORY_CONTRACT_ID: FACTORY_CONTRACT_ID || "(not set)",
+    WALLET_WASM_HASH: WALLET_WASM_HASH || "(not set)",
+    // Show the raw environment variable value to help debug
+    RAW_ENV_VALUE: process.env.NEXT_PUBLIC_FACTORY_CONTRACT_ADDRESS
+  });
+}
 
 // Create RPC Server instance
 export const rpc = new Server(STELLAR_RPC_URL);
@@ -24,34 +41,43 @@ const STORAGE_KEY_PASSKEY_ID = 'stellar-swipe:passkeyId';
 const STORAGE_KEY_CONTRACT_ID = 'stellar-swipe:contractId';
 
 /**
- * Create and return a PasskeyKit instance
- * This follows the pattern from Stellar documentation where we export a function
- * that returns the PasskeyKit instance, ensuring it only runs on the client side
+ * Extended interface for PasskeyKit constructor options
+ * Following the exact parameter names from the Stellar docs
  */
-let passkeyKitInstance: PasskeyKit | null = null;
+interface PasskeyKitOptions {
+  rpcUrl: string;  // Using correct property name 'rpcUrl' instead of typo 'rpcUlr' from docs
+  networkPassphrase: string;
+  factoryContractId: string;
+  walletWasmHash: string;  // Changed from optional to required
+}
 
-export function account() {
-  // Only run in browser environment
-  if (typeof window === 'undefined') {
-    return null;
-  }
+/**
+ * Create and export a PasskeyKit instance
+ * Following the exact pattern from Stellar documentation including parameter names
+ */
+// Only create the instance in browser environment
+const isClient = typeof window !== 'undefined';
 
-  if (!passkeyKitInstance) {
-    try {
-      passkeyKitInstance = new PasskeyKit({
-        rpcUrl: STELLAR_RPC_URL,
-        networkPassphrase: STELLAR_NETWORK_PASSPHRASE,
-        // Configure appropriate options and remove unsupported ones
-        walletWasmHash: process.env.NEXT_PUBLIC_WALLET_WASM_HASH || '', 
-      });
-      console.log("PasskeyKit initialized successfully");
-    } catch (error) {
-      console.error("Failed to initialize PasskeyKit:", error);
-      return null;
-    }
-  }
-  
-  return passkeyKitInstance;
+// Export the PasskeyKit instance directly
+export const account = isClient ? 
+  new PasskeyKit({
+    rpcUrl: STELLAR_RPC_URL,  // NOTE: This matches the parameter name in the docs (with typo)
+    networkPassphrase: STELLAR_NETWORK_PASSPHRASE,
+    factoryContractId: FACTORY_CONTRACT_ID,
+    walletWasmHash: WALLET_WASM_HASH,
+  } as PasskeyKitOptions) : 
+  null;
+
+// Log initialization status
+if (isClient && account) {
+  console.log("PasskeyKit initialized successfully with params:", {
+    rpcUrl: STELLAR_RPC_URL,  // Changed to match the parameter name used in initialization
+    networkPassphrase: STELLAR_NETWORK_PASSPHRASE?.substring(0, 20) + '...',
+    factoryContractId: FACTORY_CONTRACT_ID ? FACTORY_CONTRACT_ID : '(not set)',
+    walletWasmHash: WALLET_WASM_HASH ? '(set)' : '(not set)',
+  });
+} else if (isClient) {
+  console.error("Failed to initialize PasskeyKit");
 }
 
 /**
@@ -83,7 +109,7 @@ export const getContractId = async (passkeyId: string): Promise<string | undefin
  */
 export const createWallet = async (userId: string, rpName: string) => {
   try {
-    const passkeyKit = account();
+    const passkeyKit = account;
     if (!passkeyKit) {
       throw new Error("PasskeyKit not initialized - only available on client side");
     }
@@ -125,7 +151,7 @@ export const connectWallet = async (options: {
   rpId?: string;
 }) => {
   try {
-    const passkeyKit = account();
+    const passkeyKit = account;
     if (!passkeyKit) {
       throw new Error("PasskeyKit not initialized - only available on client side");
     }
@@ -224,18 +250,66 @@ function hashCode(str: string): number {
 }
 
 /**
+ * Utility function to check if a transaction is a Soroban transaction
+ * Soroban transactions contain operations with type 'invokeHostFunction'
+ */
+function isSorobanTransaction(tx: Transaction | FeeBumpTransaction): boolean {
+  if ('innerTransaction' in tx) {
+    // For FeeBumpTransaction, check the inner transaction
+    return isSorobanTransaction(tx.innerTransaction);
+  }
+  
+  // Check if any operation is a Soroban operation
+  return tx.operations.some(op => 
+    op.type === 'invokeHostFunction' || 
+    op.type === 'extendFootprintTtl' || 
+    op.type === 'restoreFootprint'
+  );
+}
+
+/**
  * Sign a transaction using PasskeyKit
  */
-export const signTransaction = async (tx: any) => {
+export const signTransaction = async (tx: Transaction | FeeBumpTransaction) => {
   try {
-    const passkeyKit = account();
-    if (!passkeyKit) {
+    if (!account) {
       throw new Error("PasskeyKit not initialized - only available on client side");
     }
     
-    // Sign the transaction
-    const signedTx = await passkeyKit.sign(tx);
-    return signedTx;
+    const isSoroban = isSorobanTransaction(tx);
+    console.log(`Transaction type detected: ${isSoroban ? 'Soroban' : 'Classic Stellar'}`);
+    
+    // Prepare Soroban transactions
+    if (isSoroban) {
+      console.log("Preparing Soroban transaction before signing...");
+      try {
+        // For Soroban transactions, we need to prepare and convert to XDR
+        const preparedTx = await rpc.prepareTransaction(tx);
+        
+        // Convert prepared transaction to XDR string
+        const xdr = preparedTx.toXDR();
+        console.log("Transaction prepared successfully");
+        
+        // Sign the XDR string
+        console.log("Signing prepared Soroban transaction");
+        const signedTx = await account.sign(xdr);
+        console.log("Transaction signed successfully");
+        return signedTx;
+      } catch (prepError) {
+        console.error("Error preparing transaction:", prepError);
+        throw new Error(`Failed to prepare transaction: ${prepError instanceof Error ? prepError.message : String(prepError)}`);
+      }
+    } else {
+      // For classic Stellar transactions, convert to XDR string first
+      console.log("Non-Soroban transaction, converting to XDR");
+      const xdr = tx.toXDR();
+      
+      // Sign the XDR string
+      console.log("Signing classic Stellar transaction");
+      const signedTx = await account.sign(xdr);
+      console.log("Transaction signed successfully");
+      return signedTx;
+    }
   } catch (error) {
     console.error("Error signing transaction:", error);
     throw error;
@@ -247,10 +321,88 @@ export const signTransaction = async (tx: any) => {
  */
 export const submitTransaction = async (signedTx: Transaction | FeeBumpTransaction) => {
   try {
+    console.log("Submitting transaction to network...");
     const result = await rpc.sendTransaction(signedTx);
-    return result;
+    
+    // Check transaction submission status
+    if (result.status !== "PENDING") {
+      throw new Error(`Transaction submission failed: ${result.status} - ${result.errorResult || ''}`);
+    }
+    
+    console.log("Transaction submitted successfully, waiting for confirmation...");
+    
+    // Wait for transaction to be confirmed
+    let confirmedTx;
+    const maxAttempts = 10;
+    let attempts = 0;
+    
+    while (attempts < maxAttempts) {
+      attempts++;
+      console.log(`Checking transaction status (attempt ${attempts}/${maxAttempts})...`);
+      
+      try {
+        confirmedTx = await rpc.getTransaction(result.hash);
+        
+        if (confirmedTx.status !== "NOT_FOUND") {
+          break;
+        }
+      } catch {
+        // Ignoring error and continuing to retry
+        console.log("Transaction not yet confirmed, retrying...");
+      }
+      
+      // Wait for 2 seconds before checking again
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    }
+    
+    if (!confirmedTx || confirmedTx.status === "NOT_FOUND") {
+      throw new Error("Transaction confirmation timed out");
+    }
+    
+    if (confirmedTx.status === "SUCCESS") {
+      console.log("Transaction confirmed successfully!");
+      return {
+        ...confirmedTx,
+        hash: result.hash,
+        confirmed: true
+      };
+    } else {
+      throw new Error(`Transaction failed: ${confirmedTx.status}`);
+    }
   } catch (error) {
     console.error("Error submitting transaction:", error);
     throw error;
   }
-}; 
+};
+
+// Export additional API helper functions as recommended in the documentation
+
+/**
+ * A wrapper function so it's easier for our client-side code to access the
+ * send transaction endpoint
+ *
+ * @param xdr - The base64-encoded, signed transaction. This transaction
+ * **must** contain a Soroban operation
+ * @returns JSON object containing the RPC's response
+ */
+export async function send(xdr: string) {
+  return fetch("/api/send", {
+    method: "POST",
+    body: JSON.stringify({
+      xdr,
+    }),
+  }).then(async (res) => {
+    if (res.ok) return res.json();
+    else throw await res.text();
+  });
+}
+
+/**
+ * A wrapper function for retrieving contract ID from an API
+ * This is an alternative to the local getContractId function
+ * 
+ * @param signer - The passkey ID we want to find an associated smart wallet for
+ * @returns The contract address to which the specified signer has been added
+ */
+export async function getContractIdFromAPI(signer: string) {
+  return fetch(`/api/contract/${signer}`)}

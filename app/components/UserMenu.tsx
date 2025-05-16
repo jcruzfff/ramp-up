@@ -10,7 +10,6 @@ import {
   SheetContent, 
   SheetHeader, 
   SheetTitle, 
-  SheetTrigger,
   SheetDescription
 } from "@/app/components/ui/sheet";
 import { Card, CardContent } from "@/components/ui/card";

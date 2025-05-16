@@ -332,11 +332,15 @@ export const friendsData = [
   },
 ];
 
-// Helper function for haptic feedback simulation
+// Add simulateHapticFeedback function
 export function simulateHapticFeedback() {
-  // This would use a device API in a real app
-  // Here we just log it for development purposes
-  console.log("Haptic feedback triggered");
+  // Check if the navigator.vibrate API is available
+  if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+    // Vibrate for 50ms for a short haptic feedback
+    navigator.vibrate(50);
+  }
+  
+  // No fallback needed for devices that don't support vibration
 }
 
 // Currency formatter
@@ -352,15 +356,29 @@ export function formatCurrency(amount: number, currency: string = "USD") {
   }).format(amount);
 }
 
-// User settings mock
-export function getUserSettings() {
-  return {
-    currency: "CENTS",
-    language: "en",
-    region: "US",
-    notifications: true,
-    darkMode: false,
+// Update or add getUserSettings function if needed
+export function getUserSettings(): { currency: string; language: string; region: string } {
+  // Default settings
+  const defaults = {
+    currency: 'USD',
+    language: 'en',
+    region: 'US'
   };
+  
+  if (typeof window === 'undefined') {
+    return defaults;
+  }
+  
+  try {
+    const storedSettings = localStorage.getItem('user-settings');
+    if (storedSettings) {
+      return { ...defaults, ...JSON.parse(storedSettings) };
+    }
+  } catch (error) {
+    console.error('Error reading user settings from localStorage:', error);
+  }
+  
+  return defaults;
 }
 
 // Mock data for user achievements
